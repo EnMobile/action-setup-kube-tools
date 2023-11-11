@@ -1,5 +1,6 @@
 name: "action-setup-kube-tools Test"
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
