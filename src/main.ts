@@ -101,85 +101,105 @@ const Tools: Tool[] = [
   }
 ]
 
-function getDownloadURL(commandName: string, version: string): string {
+function getDownloadURL(
+  commandName: string,
+  version: string,
+  arch: string
+): string {
   switch (commandName) {
     case 'kubectl':
       return util.format(
-        'https://storage.googleapis.com/kubernetes-release/release/v%s/bin/linux/amd64/kubectl',
-        version
+        'https://storage.googleapis.com/kubernetes-release/release/v%s/bin/linux/%s/kubectl',
+        version,
+        arch
       )
     case 'kustomize':
       return util.format(
-        'https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv%s/kustomize_v%s_linux_amd64.tar.gz',
+        'https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv%s/kustomize_v%s_linux_%s.tar.gz',
         version,
-        version
+        version,
+        arch
       )
     case 'helm':
       return util.format(
-        'https://get.helm.sh/helm-v%s-linux-amd64.tar.gz',
-        version
+        'https://get.helm.sh/helm-v%s-linux-%s.tar.gz',
+        version,
+        arch
       )
     case 'helmv2':
       return util.format(
-        'https://get.helm.sh/helm-v%s-linux-amd64.tar.gz',
-        version
+        'https://get.helm.sh/helm-v%s-linux-%s.tar.gz',
+        version,
+        arch
       )
     case 'kubeval':
       return util.format(
-        'https://github.com/instrumenta/kubeval/releases/download/v%s/kubeval-linux-amd64.tar.gz',
-        version
+        'https://github.com/instrumenta/kubeval/releases/download/v%s/kubeval-linux-%s.tar.gz',
+        version,
+        arch
       )
     case 'kubeconform':
       return util.format(
-        'https://github.com/yannh/kubeconform/releases/download/v%s/kubeconform-linux-amd64.tar.gz',
-        version
+        'https://github.com/yannh/kubeconform/releases/download/v%s/kubeconform-linux-%s.tar.gz',
+        version,
+        arch
       )
     case 'conftest':
       return util.format(
-        'https://github.com/open-policy-agent/conftest/releases/download/v%s/conftest_%s_Linux_x86_64.tar.gz',
+        'https://github.com/open-policy-agent/conftest/releases/download/v%s/conftest_%s_Linux_%s.tar.gz',
         version,
-        version
+        version,
+        arch
       )
     case 'yq':
       return util.format(
-        'https://github.com/mikefarah/yq/releases/download/v%s/yq_linux_amd64',
-        version
+        'https://github.com/mikefarah/yq/releases/download/v%s/yq_linux_%s',
+        version,
+        arch
       )
     case 'rancher':
       return util.format(
-        'https://github.com/rancher/cli/releases/download/v%s/rancher-linux-amd64-v%s.tar.gz',
+        'https://github.com/rancher/cli/releases/download/v%s/rancher-linux-%s-v%s.tar.gz',
         version,
+        arch,
         version
       )
     case 'tilt':
       return util.format(
-        'https://github.com/tilt-dev/tilt/releases/download/v%s/tilt.%s.linux.x86_64.tar.gz',
+        'https://github.com/tilt-dev/tilt/releases/download/v%s/tilt.%s.linux.%s.tar.gz',
         version,
-        version
+        version,
+        arch
       )
     case 'skaffold':
       return util.format(
-        'https://github.com/GoogleContainerTools/skaffold/releases/download/v%s/skaffold-linux-amd64',
-        version
+        'https://github.com/GoogleContainerTools/skaffold/releases/download/v%s/skaffold-linux-%s',
+        version,
+        arch
       )
     case 'kube-score':
       return util.format(
-        'https://github.com/zegl/kube-score/releases/download/v%s/kube-score_%s_linux_amd64',
+        'https://github.com/zegl/kube-score/releases/download/v%s/kube-score_%s_linux_%s',
         version,
-        version
+        version,
+        arch
       )
     default:
       return ''
   }
 }
 
-async function downloadTool(version: string, tool: Tool): Promise<string> {
+async function downloadTool(
+  version: string,
+  tool: Tool,
+  arch: string
+): Promise<string> {
   let cachedToolPath = toolCache.find(tool.name, version)
   let commandPathInPackage = tool.commandPathInPackage
   let commandPath = ''
 
   if (!cachedToolPath) {
-    const downloadURL = getDownloadURL(tool.name, version)
+    const downloadURL = getDownloadURL(tool.name, version, arch)
 
     try {
       const packagePath = await toolCache.downloadTool(downloadURL)
@@ -252,8 +272,7 @@ async function run() {
       .filter(x => x !== '')
   }
 
-  // eslint-disable-next-line github/array-foreach
-  Tools.forEach(async function(tool) {
+  for (const tool of Tools) {
     let toolPath = ''
     // By default, the action setup all supported Kubernetes tools, which mean
     // all tools can be setup when setuptools does not have any elements.
@@ -268,7 +287,7 @@ async function run() {
         toolVersion = tool.defaultVersion
       }
       try {
-        const cachedPath = await downloadTool(toolVersion, tool)
+        const cachedPath = await downloadTool(toolVersion, tool, os.arch())
         core.addPath(path.dirname(cachedPath))
         toolPath = cachedPath
       } catch (exception) {
@@ -280,7 +299,7 @@ async function run() {
       }
     }
     core.setOutput(`${tool.name}-path`, toolPath)
-  })
+  }
 }
 
 run().catch(core.setFailed)

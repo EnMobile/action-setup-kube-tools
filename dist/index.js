@@ -131,43 +131,43 @@ const Tools = [
         commandPathInPackage: 'kube-score'
     }
 ];
-function getDownloadURL(commandName, version) {
+function getDownloadURL(commandName, version, arch) {
     switch (commandName) {
         case 'kubectl':
-            return util.format('https://storage.googleapis.com/kubernetes-release/release/v%s/bin/linux/amd64/kubectl', version);
+            return util.format('https://storage.googleapis.com/kubernetes-release/release/v%s/bin/linux/%s/kubectl', version, arch);
         case 'kustomize':
-            return util.format('https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv%s/kustomize_v%s_linux_amd64.tar.gz', version, version);
+            return util.format('https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv%s/kustomize_v%s_linux_%s.tar.gz', version, version, arch);
         case 'helm':
-            return util.format('https://get.helm.sh/helm-v%s-linux-amd64.tar.gz', version);
+            return util.format('https://get.helm.sh/helm-v%s-linux-%s.tar.gz', version, arch);
         case 'helmv2':
-            return util.format('https://get.helm.sh/helm-v%s-linux-amd64.tar.gz', version);
+            return util.format('https://get.helm.sh/helm-v%s-linux-%s.tar.gz', version, arch);
         case 'kubeval':
-            return util.format('https://github.com/instrumenta/kubeval/releases/download/v%s/kubeval-linux-amd64.tar.gz', version);
+            return util.format('https://github.com/instrumenta/kubeval/releases/download/v%s/kubeval-linux-%s.tar.gz', version, arch);
         case 'kubeconform':
-            return util.format('https://github.com/yannh/kubeconform/releases/download/v%s/kubeconform-linux-amd64.tar.gz', version);
+            return util.format('https://github.com/yannh/kubeconform/releases/download/v%s/kubeconform-linux-%s.tar.gz', version, arch);
         case 'conftest':
-            return util.format('https://github.com/open-policy-agent/conftest/releases/download/v%s/conftest_%s_Linux_x86_64.tar.gz', version, version);
+            return util.format('https://github.com/open-policy-agent/conftest/releases/download/v%s/conftest_%s_Linux_%s.tar.gz', version, version, arch);
         case 'yq':
-            return util.format('https://github.com/mikefarah/yq/releases/download/v%s/yq_linux_amd64', version);
+            return util.format('https://github.com/mikefarah/yq/releases/download/v%s/yq_linux_%s', version, arch);
         case 'rancher':
-            return util.format('https://github.com/rancher/cli/releases/download/v%s/rancher-linux-amd64-v%s.tar.gz', version, version);
+            return util.format('https://github.com/rancher/cli/releases/download/v%s/rancher-linux-%s-v%s.tar.gz', version, arch, version);
         case 'tilt':
-            return util.format('https://github.com/tilt-dev/tilt/releases/download/v%s/tilt.%s.linux.x86_64.tar.gz', version, version);
+            return util.format('https://github.com/tilt-dev/tilt/releases/download/v%s/tilt.%s.linux.%s.tar.gz', version, version, arch);
         case 'skaffold':
-            return util.format('https://github.com/GoogleContainerTools/skaffold/releases/download/v%s/skaffold-linux-amd64', version);
+            return util.format('https://github.com/GoogleContainerTools/skaffold/releases/download/v%s/skaffold-linux-%s', version, arch);
         case 'kube-score':
-            return util.format('https://github.com/zegl/kube-score/releases/download/v%s/kube-score_%s_linux_amd64', version, version);
+            return util.format('https://github.com/zegl/kube-score/releases/download/v%s/kube-score_%s_linux_%s', version, version, arch);
         default:
             return '';
     }
 }
-function downloadTool(version, tool) {
+function downloadTool(version, tool, arch) {
     return __awaiter(this, void 0, void 0, function* () {
         let cachedToolPath = toolCache.find(tool.name, version);
         let commandPathInPackage = tool.commandPathInPackage;
         let commandPath = '';
         if (!cachedToolPath) {
-            const downloadURL = getDownloadURL(tool.name, version);
+            const downloadURL = getDownloadURL(tool.name, version, arch);
             try {
                 const packagePath = yield toolCache.downloadTool(downloadURL);
                 if (tool.isArchived) {
@@ -219,38 +219,35 @@ function run() {
             })
                 .filter(x => x !== '');
         }
-        // eslint-disable-next-line github/array-foreach
-        Tools.forEach(function (tool) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let toolPath = '';
-                // By default, the action setup all supported Kubernetes tools, which mean
-                // all tools can be setup when setuptools does not have any elements.
-                if (setupToolList.length === 0 || setupToolList.includes(tool.name)) {
-                    let toolVersion = core
-                        .getInput(tool.name, { required: false })
-                        .toLowerCase();
-                    if (toolVersion && toolVersion.startsWith('v')) {
-                        toolVersion = toolVersion.substr(1);
-                    }
-                    if (!toolVersion) {
-                        toolVersion = tool.defaultVersion;
-                    }
-                    try {
-                        const cachedPath = yield downloadTool(toolVersion, tool);
-                        core.addPath(path.dirname(cachedPath));
-                        toolPath = cachedPath;
-                    }
-                    catch (exception) {
-                        if (failFast) {
-                            // eslint-disable-next-line no-console
-                            console.log(`Exiting immediately (fail fast) - [Reason] ${exception}`);
-                            process.exit(1);
-                        }
+        for (const tool of Tools) {
+            let toolPath = '';
+            // By default, the action setup all supported Kubernetes tools, which mean
+            // all tools can be setup when setuptools does not have any elements.
+            if (setupToolList.length === 0 || setupToolList.includes(tool.name)) {
+                let toolVersion = core
+                    .getInput(tool.name, { required: false })
+                    .toLowerCase();
+                if (toolVersion && toolVersion.startsWith('v')) {
+                    toolVersion = toolVersion.substr(1);
+                }
+                if (!toolVersion) {
+                    toolVersion = tool.defaultVersion;
+                }
+                try {
+                    const cachedPath = yield downloadTool(toolVersion, tool, os.arch());
+                    core.addPath(path.dirname(cachedPath));
+                    toolPath = cachedPath;
+                }
+                catch (exception) {
+                    if (failFast) {
+                        // eslint-disable-next-line no-console
+                        console.log(`Exiting immediately (fail fast) - [Reason] ${exception}`);
+                        process.exit(1);
                     }
                 }
-                core.setOutput(`${tool.name}-path`, toolPath);
-            });
-        });
+            }
+            core.setOutput(`${tool.name}-path`, toolPath);
+        }
     });
 }
 run().catch(core.setFailed);
