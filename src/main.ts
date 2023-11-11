@@ -6,8 +6,8 @@ import * as fs from 'fs'
 import * as toolCache from '@actions/tool-cache'
 import * as core from '@actions/core'
 
-const defaultKubectlVersion = '1.24.10'
-const defaultKustomizeVersion = '5.0.0'
+const defaultKubectlVersion = '1.28.3'
+const defaultKustomizeVersion = '5.2.1'
 const defaultHelmVersion = '3.11.1'
 const defaultHelmv2Version = '2.17.0'
 const defaultKubevalVersion = '0.16.1'
@@ -109,7 +109,7 @@ function getDownloadURL(
   switch (commandName) {
     case 'kubectl':
       return util.format(
-        'https://storage.googleapis.com/kubernetes-release/release/v%s/bin/linux/%s/kubectl',
+        'https://dl.k8s.io/release/v%s/bin/linux/%s/kubectl',
         version,
         arch
       )
